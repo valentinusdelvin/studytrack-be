@@ -1,0 +1,89 @@
+package errx
+
+import "github.com/gofiber/fiber/v3"
+
+type RequestError struct {
+	StatusCode int            `json:"-"`
+	ErrorCode  string         `json:"error_code"`
+	Message    string         `json:"message"`
+	Location   string         `json:"-"`
+	Details    map[string]any `json:"-"`
+	Err        error          `json:"-"`
+}
+
+func (r *RequestError) Error() string {
+	return r.Message
+}
+
+func (r *RequestError) Is(target error) bool {
+	t, ok := target.(*RequestError)
+	if !ok {
+		return false
+	}
+	return r.ErrorCode == t.ErrorCode
+}
+
+func NewError(statusCode int, errorCode string, message string) *RequestError {
+	return &RequestError{
+		StatusCode: statusCode,
+		ErrorCode:  errorCode,
+		Message:    message,
+	}
+}
+
+func (r *RequestError) clone() *RequestError {
+	c := *r
+	return &c
+}
+
+func (r *RequestError) WithLocation(location string) *RequestError {
+	c := r.clone()
+	c.Location = location
+	return c
+}
+
+func (r *RequestError) WithMessage(message string) *RequestError {
+	c := r.clone()
+	c.Message = message
+	return c
+}
+
+func (r *RequestError) WithDetails(details map[string]any) *RequestError {
+	c := r.clone()
+	c.Details = details
+	return c
+}
+
+func (r *RequestError) WithError(err error) *RequestError {
+	c := r.clone()
+	c.Err = err
+	return c
+}
+
+var (
+	ErrInternalServer = NewError(
+		fiber.StatusInternalServerError,
+		"internal_server_error",
+		"Something went wrong on our end. Please try again later.",
+	)
+	ErrNotFound = NewError(
+		fiber.StatusNotFound,
+		"not_found",
+		"The requested resource could not be found.",
+	)
+	ErrForbidden = NewError(
+		fiber.StatusForbidden,
+		"forbidden",
+		"You don't have permission to access this resource.",
+	)
+	ErrUnauthorized = NewError(
+		fiber.StatusUnauthorized,
+		"unauthorized",
+		"You are not authorized to access this resource.",
+	)
+	ErrBadRequest = NewError(
+		fiber.StatusBadRequest,
+		"bad_request",
+		"The request body is not valid.",
+	)
+)
