@@ -1,6 +1,7 @@
 package env
 
 import (
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -44,6 +45,13 @@ func getEnv() *Env {
 			"error": err.Error(),
 		}).Fatal("[Env][GetEnv] failed to unmarshal to struct")
 	}
+	if env.JwtExpTime <= 0 {
+		env.JwtExpTime = 7 * 24 * time.Hour
+	}
+	env.DBHost = strings.TrimSpace(env.DBHost)
+	env.DBPort = strings.TrimSpace(env.DBPort)
+	env.DBUser = strings.TrimSpace(env.DBUser)
+	env.DBName = strings.TrimSpace(env.DBName)
 
 	switch env.AppEnv {
 	case "development":
