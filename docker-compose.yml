@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: studytrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: studytrack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - studytrack-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d studytrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  studytrack-postgres-data:
