@@ -3,6 +3,7 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,7 +15,7 @@ var ErrInvalidTokenType = errors.New("invalid token type")
 
 type CustomJwtInterface interface {
 	Create(
-		id uuid.UUID,
+		id uint64,
 		name string,
 		email string,
 	) (string, error)
@@ -23,9 +24,9 @@ type CustomJwtInterface interface {
 
 type Claims struct {
 	jwt.RegisteredClaims
-	ID    uuid.UUID `json:"id"`
-	Name  string    `json:"name"`
-	Email string    `json:"email"`
+	UserID uint64 `json:"-"`
+	Name   string `json:"nama"`
+	Email  string `json:"email"`
 }
 
 type CustomJwtStruct struct {
@@ -43,7 +44,7 @@ func getJwt() CustomJwtInterface {
 }
 
 func (j *CustomJwtStruct) generateToken(
-	id uuid.UUID,
+	id uint64,
 	name string,
 	email string,
 	duration time.Duration,
@@ -55,11 +56,12 @@ func (j *CustomJwtStruct) generateToken(
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			ID:        uuid.New().String(),
+			ID:        uuid.NewString(),
+			Subject:   strconv.FormatUint(id, 10),
 		},
-		ID:    id,
-		Name:  name,
-		Email: email,
+		UserID: id,
+		Name:   name,
+		Email:  email,
 	}
 
 	unsignedJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -72,7 +74,7 @@ func (j *CustomJwtStruct) generateToken(
 }
 
 func (j *CustomJwtStruct) Create(
-	id uuid.UUID,
+	id uint64,
 	name string,
 	email string,
 ) (string, error) {
@@ -96,6 +98,10 @@ func (j *CustomJwtStruct) Decode(tokenString string, claims *Claims) error {
 
 	if !token.Valid {
 		return jwt.ErrSignatureInvalid
+	}
+	claims.UserID, err = strconv.ParseUint(claims.Subject, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid user id claim: %w", err)
 	}
 
 	return nil
