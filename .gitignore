@@ -31,3 +31,6 @@ config/.env
 # Editor/IDE
 .idea/
 # .vscode/
+.agents/
+
+tmp/
