@@ -1,0 +1,8 @@
+.git
+.gitignore
+.dockerignore
+config/.env
+**/*.test
+coverage.*
+*.out
+tmp

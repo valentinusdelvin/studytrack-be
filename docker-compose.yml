@@ -1,21 +1,55 @@
 services:
-  postgres:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: studytrack-app
+    env_file:
+      - ./config/.env
+    environment:
+      - APP_PORT=8080
+      - DB_HOST=db
+      - DB_PORT=5432
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - ./config/.env:/app/config/.env:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - studytrack-network
+    restart: unless-stopped
+
+  db:
     image: postgres:17-alpine
     container_name: studytrack-postgres
     restart: unless-stopped
+    env_file:
+      - ./config/.env
     environment:
-      POSTGRES_DB: studytrack
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      - POSTGRES_USER=${DB_USER:?Set DB_USER in config/.env}
+      - POSTGRES_PASSWORD=${DB_PASS:?Set DB_PASS in config/.env}
+      - POSTGRES_DB=${DB_NAME:?Set DB_NAME in config/.env}
+      - TZ=UTC
+      - PGTZ=UTC
     ports:
-      - "5435:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - studytrack-postgres-data:/var/lib/postgresql/data
+    networks:
+      - studytrack-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d studytrack"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:?Set DB_USER in config/.env} -d ${DB_NAME:?Set DB_NAME in config/.env}"]
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
+
+networks:
+  studytrack-network:
+    name: studytrack-network
+    driver: bridge
+
 
 volumes:
   studytrack-postgres-data:
