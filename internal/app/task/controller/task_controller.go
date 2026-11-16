@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/valentinusdelvin/studytrack-be/domain/dto"
 	"github.com/valentinusdelvin/studytrack-be/domain/errx"
@@ -8,43 +10,51 @@ import (
 	"github.com/valentinusdelvin/studytrack-be/internal/app/task/service"
 	"github.com/valentinusdelvin/studytrack-be/internal/middleware"
 	"github.com/valentinusdelvin/studytrack-be/pkg/helpers/http/response"
-	"strconv"
 )
 
-type Controller struct{ service *service.Service }
+type TaskController struct {
+	taskService *service.TaskService
+}
 
-func New(service *service.Service) *Controller { return &Controller{service: service} }
-func (c *Controller) List(ctx fiber.Ctx) error {
-	res, err := c.service.List(ctx.Context(), middleware.UserID(ctx))
+func NewTaskController(taskService *service.TaskService) *TaskController {
+	return &TaskController{
+		taskService: taskService,
+	}
+}
+
+func (c *TaskController) GetTasks(ctx fiber.Ctx) error {
+	res, err := c.taskService.GetTasks(ctx.Context(), middleware.UserID(ctx))
 	if err != nil {
 		return response.SendResponse(ctx, httpx.Status(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusOK, res)
 }
-func (c *Controller) Get(ctx fiber.Ctx) error {
-	id, err := pathID(ctx)
+
+func (c *TaskController) GetTaskByID(ctx fiber.Ctx) error {
+	id, err := parseTaskID(ctx)
 	if err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, err)
 	}
-	res, err := c.service.Get(ctx.Context(), middleware.UserID(ctx), id)
+	res, err := c.taskService.GetTaskByID(ctx.Context(), middleware.UserID(ctx), id)
 	if err != nil {
 		return response.SendResponse(ctx, httpx.Status(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusOK, res)
 }
-func (c *Controller) Create(ctx fiber.Ctx) error {
+func (c *TaskController) CreateTask(ctx fiber.Ctx) error {
 	var req dto.CreateTaskRequest
 	if err := ctx.Bind().Body(&req); err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, errx.ErrBadRequest.WithError(err))
 	}
-	res, err := c.service.Create(ctx.Context(), middleware.UserID(ctx), req)
+	res, err := c.taskService.CreateTask(ctx.Context(), middleware.UserID(ctx), req)
 	if err != nil {
 		return response.SendResponse(ctx, httpx.Status(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusCreated, res)
 }
-func (c *Controller) Update(ctx fiber.Ctx) error {
-	id, err := pathID(ctx)
+
+func (c *TaskController) UpdateTask(ctx fiber.Ctx) error {
+	id, err := parseTaskID(ctx)
 	if err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, err)
 	}
@@ -52,24 +62,26 @@ func (c *Controller) Update(ctx fiber.Ctx) error {
 	if err = ctx.Bind().Body(&req); err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, errx.ErrBadRequest.WithError(err))
 	}
-	res, err := c.service.Update(ctx.Context(), middleware.UserID(ctx), id, req)
+	res, err := c.taskService.UpdateTask(ctx.Context(), middleware.UserID(ctx), id, req)
 	if err != nil {
 		return response.SendResponse(ctx, httpx.Status(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusOK, res)
 }
-func (c *Controller) Delete(ctx fiber.Ctx) error {
-	id, err := pathID(ctx)
+
+func (c *TaskController) DeleteTask(ctx fiber.Ctx) error {
+	id, err := parseTaskID(ctx)
 	if err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, err)
 	}
-	res, err := c.service.Delete(ctx.Context(), middleware.UserID(ctx), id)
+	res, err := c.taskService.DeleteTask(ctx.Context(), middleware.UserID(ctx), id)
 	if err != nil {
 		return response.SendResponse(ctx, httpx.Status(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusOK, res)
 }
-func pathID(ctx fiber.Ctx) (uint64, error) {
+
+func parseTaskID(ctx fiber.Ctx) (uint64, error) {
 	id, err := strconv.ParseUint(ctx.Params("id"), 10, 64)
 	if err != nil || id == 0 {
 		return 0, errx.ErrBadRequest.WithMessage("ID tugas tidak valid.")
