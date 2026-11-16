@@ -10,40 +10,44 @@ import (
 	"github.com/valentinusdelvin/studytrack-be/pkg/helpers/http/response"
 )
 
-type Controller struct{ service *service.Service }
+type AuthController struct{ authService *service.AuthService }
 
-func New(service *service.Service) *Controller { return &Controller{service: service} }
+func NewAuthController(authService *service.AuthService) *AuthController {
+	return &AuthController{
+		authService: authService,
+	}
+}
 
-func (c *Controller) Register(ctx fiber.Ctx) error {
+func (c *AuthController) RegisterUser(ctx fiber.Ctx) error {
 	var req dto.RegisterRequest
 	if err := ctx.Bind().Body(&req); err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, errx.ErrBadRequest.WithError(err))
 	}
-	res, err := c.service.Register(ctx.Context(), req)
+	res, err := c.authService.Register(ctx.Context(), req)
 	if err != nil {
-		return response.SendResponse(ctx, errorStatus(err), err)
+		return response.SendResponse(ctx, responseStatusFromError(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusCreated, res)
 }
 
-func (c *Controller) Login(ctx fiber.Ctx) error {
+func (c *AuthController) LoginUser(ctx fiber.Ctx) error {
 	var req dto.LoginRequest
 	if err := ctx.Bind().Body(&req); err != nil {
 		return response.SendResponse(ctx, fiber.StatusBadRequest, errx.ErrBadRequest.WithError(err))
 	}
-	res, err := c.service.Login(ctx.Context(), req)
+	res, err := c.authService.Login(ctx.Context(), req)
 	if err != nil {
-		return response.SendResponse(ctx, errorStatus(err), err)
+		return response.SendResponse(ctx, responseStatusFromError(err), err)
 	}
 	return response.SendResponse(ctx, fiber.StatusOK, res)
 }
 
-func (c *Controller) Me(ctx fiber.Ctx) error {
+func (c *AuthController) GetCurrentUser(ctx fiber.Ctx) error {
 	user, _ := ctx.Locals("user").(dto.UserResponse)
 	return response.SendResponse(ctx, fiber.StatusOK, dto.MeResponse{User: user})
 }
 
-func errorStatus(err error) int {
+func responseStatusFromError(err error) int {
 	var reqErr *errx.RequestError
 	if errors.As(err, &reqErr) {
 		return reqErr.StatusCode

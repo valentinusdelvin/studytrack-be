@@ -16,20 +16,23 @@ import (
 	"gorm.io/gorm"
 )
 
-type Service struct {
-	repo *repository.Repository
-	jwt  appjwt.CustomJwtInterface
+type AuthService struct {
+	authRepo *repository.AuthRepository
+	jwt      appjwt.CustomJwtInterface
 }
 
-func New(repo *repository.Repository, jwt appjwt.CustomJwtInterface) *Service {
-	return &Service{repo: repo, jwt: jwt}
+func NewAuthService(authRepo *repository.AuthRepository, jwt appjwt.CustomJwtInterface) *AuthService {
+	return &AuthService{
+		authRepo: authRepo,
+		jwt:      jwt,
+	}
 }
 
-func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) (dto.AuthResponse, error) {
+func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (dto.AuthResponse, error) {
 	if err := validation.Validate(req); err != nil {
 		return dto.AuthResponse{}, err
 	}
-	if _, err := s.repo.FindByEmail(ctx, req.Email); err == nil {
+	if _, err := s.authRepo.FindUserByEmail(ctx, req.Email); err == nil {
 		return dto.AuthResponse{}, errx.NewError(fiber.StatusConflict, "email_already_registered", "Email sudah terdaftar.")
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return dto.AuthResponse{}, errx.ErrInternalServer.WithError(err).WithLocation("auth.Register.findByEmail")
@@ -39,21 +42,21 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) (dto.Au
 		return dto.AuthResponse{}, errx.ErrInternalServer.WithError(err).WithLocation("auth.Register.hashPassword")
 	}
 	user := &entity.User{Name: strings.TrimSpace(req.Name), Email: strings.ToLower(strings.TrimSpace(req.Email)), PasswordHash: string(hash)}
-	if err := s.repo.Create(ctx, user); err != nil {
+	if err := s.authRepo.CreateUser(ctx, user); err != nil {
 		var requestErr *errx.RequestError
 		if errors.As(err, &requestErr) {
 			return dto.AuthResponse{}, err
 		}
 		return dto.AuthResponse{}, errx.ErrInternalServer.WithError(err).WithLocation("auth.Register.createUser")
 	}
-	return s.authResponse(user)
+	return s.createAuthResponse(user)
 }
 
-func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.AuthResponse, error) {
+func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.AuthResponse, error) {
 	if err := validation.Validate(req); err != nil {
 		return dto.AuthResponse{}, err
 	}
-	user, err := s.repo.FindByEmail(ctx, req.Email)
+	user, err := s.authRepo.FindUserByEmail(ctx, req.Email)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return dto.AuthResponse{}, errx.NewError(fiber.StatusUnauthorized, "invalid_credentials", "Email atau password salah.")
 	}
@@ -63,10 +66,10 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.AuthResp
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
 		return dto.AuthResponse{}, errx.NewError(fiber.StatusUnauthorized, "invalid_credentials", "Email atau password salah.")
 	}
-	return s.authResponse(user)
+	return s.createAuthResponse(user)
 }
 
-func (s *Service) authResponse(user *entity.User) (dto.AuthResponse, error) {
+func (s *AuthService) createAuthResponse(user *entity.User) (dto.AuthResponse, error) {
 	token, err := s.jwt.Create(user.ID, user.Name, user.Email)
 	if err != nil {
 		return dto.AuthResponse{}, errx.ErrInternalServer.WithError(err).WithLocation("auth.createToken")
