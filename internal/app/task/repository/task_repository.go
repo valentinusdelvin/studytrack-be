@@ -7,16 +7,22 @@ import (
 	"gorm.io/gorm"
 )
 
-type Repository struct{ db *gorm.DB }
+type TaskRepository struct {
+	db *gorm.DB
+}
 
 type TaskWithCourse struct {
 	entity.Task
 	CourseName string `gorm:"column:course_name"`
 }
 
-func New(db *gorm.DB) *Repository { return &Repository{db: db} }
+func NewTaskRepository(db *gorm.DB) *TaskRepository {
+	return &TaskRepository{
+		db: db,
+	}
+}
 
-func (r *Repository) List(ctx context.Context, userID uint64) ([]TaskWithCourse, error) {
+func (r *TaskRepository) GetTasksByUserID(ctx context.Context, userID uint64) ([]TaskWithCourse, error) {
 	var rows []TaskWithCourse
 	err := r.db.WithContext(ctx).Table("tasks").
 		Select("tasks.*, courses.name AS course_name").
@@ -26,7 +32,7 @@ func (r *Repository) List(ctx context.Context, userID uint64) ([]TaskWithCourse,
 	return rows, err
 }
 
-func (r *Repository) Get(ctx context.Context, userID, id uint64) (*entity.Task, error) {
+func (r *TaskRepository) GetTaskByIDAndUserID(ctx context.Context, userID, id uint64) (*entity.Task, error) {
 	var row entity.Task
 	err := r.db.WithContext(ctx).Where("user_id = ? AND id = ?", userID, id).First(&row).Error
 	if err != nil {
@@ -35,18 +41,18 @@ func (r *Repository) Get(ctx context.Context, userID, id uint64) (*entity.Task, 
 	return &row, nil
 }
 
-func (r *Repository) IsCourseOwned(ctx context.Context, userID, courseID uint64) (bool, error) {
+func (r *TaskRepository) IsCourseOwnedByUser(ctx context.Context, userID, courseID uint64) (bool, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&entity.Course{}).Where("id = ? AND user_id = ?", courseID, userID).Count(&count).Error
 	return count > 0, err
 }
 
-func (r *Repository) Create(ctx context.Context, row *entity.Task) error {
+func (r *TaskRepository) CreateTask(ctx context.Context, row *entity.Task) error {
 	return r.db.WithContext(ctx).Create(row).Error
 }
-func (r *Repository) Save(ctx context.Context, row *entity.Task) error {
+func (r *TaskRepository) UpdateTask(ctx context.Context, row *entity.Task) error {
 	return r.db.WithContext(ctx).Save(row).Error
 }
-func (r *Repository) Delete(ctx context.Context, userID, id uint64) error {
+func (r *TaskRepository) DeleteTask(ctx context.Context, userID, id uint64) error {
 	return r.db.WithContext(ctx).Where("user_id = ? AND id = ?", userID, id).Delete(&entity.Task{}).Error
 }

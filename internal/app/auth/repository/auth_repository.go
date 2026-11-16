@@ -13,11 +13,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type Repository struct{ db *gorm.DB }
+type AuthRepository struct {
+	db *gorm.DB
+}
 
-func New(db *gorm.DB) *Repository { return &Repository{db: db} }
+func NewAuthRepository(db *gorm.DB) *AuthRepository {
+	return &AuthRepository{
+		db: db,
+	}
+}
 
-func (r *Repository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *AuthRepository) FindUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("lower(email) = ?", strings.ToLower(strings.TrimSpace(email))).First(&user).Error
 	if err != nil {
@@ -26,7 +32,7 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (*entity.Use
 	return &user, nil
 }
 
-func (r *Repository) Create(ctx context.Context, user *entity.User) error {
+func (r *AuthRepository) CreateUser(ctx context.Context, user *entity.User) error {
 	err := r.db.WithContext(ctx).Create(user).Error
 	if err == nil {
 		return nil
