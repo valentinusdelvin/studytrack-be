@@ -7,7 +7,7 @@ import (
 )
 
 type CreateTaskRequest struct {
-	CourseID    uint64 `json:"mata_kuliah_id" validate:"required,min=1"`
+	CourseID    string `json:"mata_kuliah_id" validate:"required,min=1"`
 	Title       string `json:"judul" validate:"required,max=255"`
 	Description string `json:"deskripsi" validate:"max=10000"`
 	Deadline    string `json:"deadline" validate:"required"`

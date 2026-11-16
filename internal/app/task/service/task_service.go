@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,14 +56,20 @@ func (s *TaskService) CreateTask(ctx context.Context, userID uint64, req dto.Cre
 	if err != nil {
 		return dto.TaskEnvelope{}, errx.ErrBadRequest.WithMessage("Format deadline tidak valid.").WithError(err)
 	}
-	owned, err := s.taskRepo.IsCourseOwnedByUser(ctx, userID, req.CourseID)
+
+	courseID, err := strconv.Atoi(req.CourseID)
+	if err != nil {
+		return dto.TaskEnvelope{}, errx.ErrBadRequest.WithMessage("Course ID tidak valid.").WithError(err)
+	}
+
+	owned, err := s.taskRepo.IsCourseOwnedByUser(ctx, userID, uint64(courseID))
 	if err != nil {
 		return dto.TaskEnvelope{}, dbError(err, "task.Create.checkCourse")
 	}
 	if !owned {
 		return dto.TaskEnvelope{}, errx.ErrBadRequest.WithMessage("Mata kuliah tidak ditemukan untuk user ini.")
 	}
-	row := entity.Task{UserID: userID, CourseID: req.CourseID, Title: strings.TrimSpace(req.Title), Description: req.Description, Deadline: deadline, Status: enums.TaskStatusNotDone}
+	row := entity.Task{UserID: userID, CourseID: uint64(courseID), Title: strings.TrimSpace(req.Title), Description: req.Description, Deadline: deadline, Status: enums.TaskStatusNotDone}
 	if err := s.taskRepo.CreateTask(ctx, &row); err != nil {
 		return dto.TaskEnvelope{}, dbError(err, "task.Create")
 	}
