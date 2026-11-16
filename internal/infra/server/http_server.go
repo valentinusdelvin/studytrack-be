@@ -57,6 +57,7 @@ func NewHTTPServer(db *gorm.DB) HTTPServer {
 
 	app := fiber.New(config)
 	app.Use(requestid.New())
+	app.Use(middleware.Cors())
 
 	return &httpServer{
 		app: app,
