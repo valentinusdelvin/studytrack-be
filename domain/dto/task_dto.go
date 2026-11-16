@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/valentinusdelvin/studytrack-be/domain/entity"
+	"github.com/valentinusdelvin/studytrack-be/domain/enums"
 )
 
 type CreateTaskRequest struct {
@@ -33,7 +34,8 @@ type TaskResponse struct {
 
 type TaskListItem struct {
 	TaskResponse
-	CourseName string `json:"mata_kuliah"`
+	CourseName     string `json:"mata_kuliah"`
+	DeadlineStatus string `json:"status_deadline"`
 }
 
 type TasksResponse struct {
@@ -52,9 +54,10 @@ func FormatToTaskResponse(task entity.Task) TaskResponse {
 	}
 }
 
-func FormatToTaskListItemResponse(task entity.Task, courseName string) TaskListItem {
+func FormatToTaskListItemResponse(task entity.Task, courseName string, deadlineStatus enums.TaskDeadlineStatus) TaskListItem {
 	return TaskListItem{
-		TaskResponse: FormatToTaskResponse(task),
-		CourseName:   courseName,
+		TaskResponse:   FormatToTaskResponse(task),
+		CourseName:     courseName,
+		DeadlineStatus: string(deadlineStatus),
 	}
 }

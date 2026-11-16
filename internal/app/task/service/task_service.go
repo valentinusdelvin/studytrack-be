@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata"
 
-	"github.com/gofiber/fiber/v3"
 	"github.com/valentinusdelvin/studytrack-be/domain/dto"
 	"github.com/valentinusdelvin/studytrack-be/domain/entity"
 	"github.com/valentinusdelvin/studytrack-be/domain/enums"
@@ -30,10 +30,8 @@ func (s *TaskService) GetTasks(ctx context.Context, userID uint64) (dto.TasksRes
 	if err != nil {
 		return dto.TasksResponse{}, dbError(err, "task.List")
 	}
-	out := make([]dto.TaskListItem, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, dto.FormatToTaskListItemResponse(row.Task, row.CourseName))
-	}
+	now := time.Now()
+	out := formatTaskListItems(rows, now)
 	return dto.TasksResponse{Tasks: out}, nil
 }
 
@@ -121,17 +119,4 @@ func (s *TaskService) DeleteTask(ctx context.Context, userID, id uint64) (dto.Su
 		return dto.SuccessResponse{}, dbError(err, "task.Delete")
 	}
 	return dto.SuccessResponse{Success: true}, nil
-}
-
-func parseTaskDeadline(value string) (time.Time, error) {
-	for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05", time.RFC3339, time.RFC3339Nano} {
-		if parsed, err := time.Parse(layout, value); err == nil {
-			return parsed, nil
-		}
-	}
-	return time.Time{}, fiber.NewError(fiber.StatusBadRequest, "invalid deadline")
-}
-
-func dbError(err error, location string) error {
-	return errx.ErrInternalServer.WithError(err).WithLocation(location)
 }
